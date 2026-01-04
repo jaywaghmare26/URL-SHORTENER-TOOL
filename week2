@@ -1,0 +1,164 @@
+import json
+import string
+import random
+import os
+from urllib.parse import urlparse
+
+class URLShortener:
+    def __init__(self, data_file='urls.json'):
+        self.data_file = data_file
+        self.urls = self.fetch_data()
+    
+    def fetch_data(self):
+    
+        if os.path.exists(self.data_file):
+            try:
+                with open(self.data_file, 'r') as file:
+                    return json.load(file)
+            except:
+                return {}
+        return {}
+    
+    def store_data(self):
+        
+        with open(self.data_file, 'w') as file:
+            json.dump(self.urls, file, indent=2)
+    
+    def create_code(self, size=6):
+       
+        chars = string.ascii_letters + string.digits
+        code = ''.join(random.choice(chars) for i in range(size))
+       
+        if code in self.urls:
+            return self.create_code(size)
+        return code
+    
+    def check_url(self, url):
+      
+        try:
+            parts = urlparse(url)
+            if parts.scheme and parts.netloc:
+                return True
+            return False
+        except:
+            return False
+    
+    def make_short(self, original_url):
+       
+        if not self.check_url(original_url):
+            return None, "URL is not valid. Add http:// or https://"
+        
+       
+        for code, url in self.urls.items():
+            if url == original_url:
+                return code, "This URL is already in the system"
+        
+       
+        new_code = self.create_code()
+        self.urls[new_code] = original_url
+        self.store_data()
+        
+        return new_code, "Done!"
+    
+    def find_url(self, code):
+       
+        if code in self.urls:
+            return self.urls[code]
+        return None
+    
+    def show_all(self):
+    
+        return self.urls
+    
+    def remove_url(self, code):
+    
+        if code in self.urls:
+            del self.urls[code]
+            self.store_data()
+            return True
+        return False
+
+
+def show_options():
+    print("\n" + "-"*45)
+    print("      URL Shortener")
+    print("-"*45)
+    print("1. Create short URL")
+    print("2. Get original URL")
+    print("3. Show all URLs")
+    print("4. Remove URL")
+    print("5. Quit")
+    print("-"*45)
+
+
+def run():
+    app = URLShortener()
+    
+    print("Welcome to URL Shortener!")
+    
+    while True:
+        show_options()
+        
+        try:
+            user_input = input("\nWhat do you want to do? (1-5): ").strip()
+            
+            if user_input == '1':
+                url = input("Enter URL: ").strip()
+                
+                if len(url) == 0:
+                    print("You need to enter something!")
+                    continue
+                
+                code, msg = app.make_short(url)
+                
+                if code:
+                    print(f"\n{msg}")
+                    print(f"Your code: {code}")
+                    print(f"URL: {url}")
+                else:
+                    print(f"\nError: {msg}")
+            
+            elif user_input == '2':
+                code = input("Enter code: ").strip()
+                url = app.find_url(code)
+                
+                if url:
+                    print(f"\nFound it: {url}")
+                else:
+                    print(f"\nCouldn't find code: {code}")
+            
+            elif user_input == '3':
+                all_data = app.show_all()
+                
+                if len(all_data) > 0:
+                    print(f"\nYou have {len(all_data)} shortened URLs:")
+                    print("-" * 45)
+                    for code, url in all_data.items():
+                        print(f"{code} -> {url}")
+                else:
+                    print("\nNo URLs saved yet")
+            
+            elif user_input == '4':
+                code = input("Enter code to remove: ").strip()
+                
+                if app.remove_url(code):
+                    print(f"\nDeleted: {code}")
+                else:
+                    print(f"\nCode not found: {code}")
+            
+            elif user_input == '5':
+                print("\nBye!")
+                break
+            
+            else:
+                print("\nPlease pick 1-5")
+        
+        except KeyboardInterrupt:
+            print("\n\nExiting...")
+            break
+        except Exception as err:
+            print(f"\nSomething went wrong: {err}")
+
+
+if __name__ == "__main__":
+    run()
